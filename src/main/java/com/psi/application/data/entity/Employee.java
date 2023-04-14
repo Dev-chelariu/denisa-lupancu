@@ -2,20 +2,28 @@ package com.psi.application.data.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
+
 import java.time.LocalDate;
 
 @Entity
-public class SamplePerson extends AbstractEntity {
+public class Employee extends AbstractEntity {
 
+    @NotNull
     private String firstName;
+    @NotNull
     private String lastName;
     @Email
     private String email;
+    @NotNull
     private String phone;
-    private LocalDate dateOfBirth;
+    @Past
+    private LocalDate hireDate;
+    @NotNull
     private String occupation;
-    private String role;
-    private boolean important;
+    @NotNull
+    private String iban;
 
     public String getFirstName() {
         return firstName;
@@ -41,29 +49,25 @@ public class SamplePerson extends AbstractEntity {
     public void setPhone(String phone) {
         this.phone = phone;
     }
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
     public String getOccupation() {
         return occupation;
     }
     public void setOccupation(String occupation) {
         this.occupation = occupation;
     }
-    public String getRole() {
-        return role;
-    }
-    public void setRole(String role) {
-        this.role = role;
-    }
-    public boolean isImportant() {
-        return important;
-    }
-    public void setImportant(boolean important) {
-        this.important = important;
+    public LocalDate getHireDate() {
+        return hireDate;
     }
 
+    public void setHireDate(LocalDate hireDate) {
+        this.hireDate = hireDate;
+    }
+
+    public String getIban() {
+        return iban;
+    }
+
+    public void setIban(String iban) {
+        this.iban = iban;
+    }
 }

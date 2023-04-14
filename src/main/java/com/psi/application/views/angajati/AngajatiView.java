@@ -1,13 +1,12 @@
 package com.psi.application.views.angajati;
 
-import com.psi.application.data.entity.SamplePerson;
-import com.psi.application.data.service.SamplePersonService;
+import com.psi.application.data.entity.Employee;
+import com.psi.application.data.service.EmployeeService;
 import com.psi.application.views.MainLayout;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.checkbox.CheckboxGroup;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dependency.Uses;
@@ -26,15 +25,12 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.spring.data.VaadinSpringDataHelpers;
 import com.vaadin.flow.theme.lumo.LumoUtility;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
-import java.util.ArrayList;
-import java.util.List;
+import jakarta.persistence.criteria.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @PageTitle("Angajati")
 @Route(value = "angajati", layout = MainLayout.class)
@@ -42,17 +38,17 @@ import org.springframework.data.jpa.domain.Specification;
 @Uses(Icon.class)
 public class AngajatiView extends Div {
 
-    private Grid<SamplePerson> grid;
+    private Grid<Employee> grid;
 
-    private Filters filters;
-    private final SamplePersonService samplePersonService;
+    private final Filters filters;
+    private final EmployeeService employeeService;
 
-    public AngajatiView(SamplePersonService SamplePersonService) {
-        this.samplePersonService = SamplePersonService;
+    public AngajatiView(EmployeeService EmployeeService) {
+        this.employeeService = EmployeeService;
         setSizeFull();
         addClassNames("angajati-view");
 
-        filters = new Filters(() -> refreshGrid());
+        filters = new Filters(this::refreshGrid);
         VerticalLayout layout = new VerticalLayout(createMobileFilters(), filters, createGrid());
         layout.setSizeFull();
         layout.setPadding(false);
@@ -84,14 +80,15 @@ public class AngajatiView extends Div {
         return mobileFilters;
     }
 
-    public static class Filters extends Div implements Specification<SamplePerson> {
+    public static class Filters extends Div implements Specification<Employee> {
 
-        private final TextField name = new TextField("Name");
+        private final TextField firstName = new TextField("FirstName");
+        private final TextField lastName = new TextField("LastName");
         private final TextField phone = new TextField("Phone");
-        private final DatePicker startDate = new DatePicker("Date of Birth");
+
+        private final DatePicker hireDate = new DatePicker("Hire Date");
         private final DatePicker endDate = new DatePicker();
         private final MultiSelectComboBox<String> occupations = new MultiSelectComboBox<>("Occupation");
-        private final CheckboxGroup<String> roles = new CheckboxGroup<>("Role");
 
         public Filters(Runnable onSearch) {
 
@@ -99,23 +96,21 @@ public class AngajatiView extends Div {
             addClassName("filter-layout");
             addClassNames(LumoUtility.Padding.Horizontal.LARGE, LumoUtility.Padding.Vertical.MEDIUM,
                     LumoUtility.BoxSizing.BORDER);
-            name.setPlaceholder("First or last name");
+            firstName.setPlaceholder("First name");
+            lastName.setPlaceholder ("Last Name");
 
             occupations.setItems("Insurance Clerk", "Mortarman", "Beer Coil Cleaner", "Scale Attendant");
-
-            roles.setItems("Worker", "Supervisor", "Manager", "External");
-            roles.addClassName("double-width");
 
             // Action buttons
             Button resetBtn = new Button("Reset");
             resetBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
             resetBtn.addClickListener(e -> {
-                name.clear();
+                firstName.clear();
+                lastName.clear ();
                 phone.clear();
-                startDate.clear();
+                hireDate.clear();
                 endDate.clear();
                 occupations.clear();
-                roles.clear();
                 onSearch.run();
             });
             Button searchBtn = new Button("Search");
@@ -126,19 +121,19 @@ public class AngajatiView extends Div {
             actions.addClassName(LumoUtility.Gap.SMALL);
             actions.addClassName("actions");
 
-            add(name, phone, createDateRangeFilter(), occupations, roles, actions);
+            add(firstName,lastName, phone, createDateRangeFilter(), occupations, actions);
         }
 
         private Component createDateRangeFilter() {
-            startDate.setPlaceholder("From");
+            hireDate.setPlaceholder("From");
 
             endDate.setPlaceholder("To");
 
             // For screen readers
-            setAriaLabel(startDate, "From date");
+            setAriaLabel(hireDate, "From date");
             setAriaLabel(endDate, "To date");
 
-            FlexLayout dateRangeComponent = new FlexLayout(startDate, new Text(" – "), endDate);
+            FlexLayout dateRangeComponent = new FlexLayout(hireDate, new Text(" – "), endDate);
             dateRangeComponent.setAlignItems(FlexComponent.Alignment.BASELINE);
             dateRangeComponent.addClassName(LumoUtility.Gap.XSMALL);
 
@@ -152,16 +147,20 @@ public class AngajatiView extends Div {
         }
 
         @Override
-        public Predicate toPredicate(Root<SamplePerson> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+        public Predicate toPredicate(Root<Employee> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (!name.isEmpty()) {
-                String lowerCaseFilter = name.getValue().toLowerCase();
+            if (!firstName.isEmpty()) {
+                String lowerCaseFilter = firstName.getValue().toLowerCase();
                 Predicate firstNameMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")),
                         lowerCaseFilter + "%");
+                predicates.add(criteriaBuilder.or(firstNameMatch));
+            }
+            if (!lastName.isEmpty()) {
+                String lowerCaseFilter = lastName.getValue().toLowerCase();
                 Predicate lastNameMatch = criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")),
                         lowerCaseFilter + "%");
-                predicates.add(criteriaBuilder.or(firstNameMatch, lastNameMatch));
+                predicates.add(criteriaBuilder.or(lastNameMatch));
             }
             if (!phone.isEmpty()) {
                 String databaseColumn = "phone";
@@ -174,13 +173,13 @@ public class AngajatiView extends Div {
                 predicates.add(phoneMatch);
 
             }
-            if (startDate.getValue() != null) {
-                String databaseColumn = "dateOfBirth";
+            if (hireDate.getValue() != null) {
+                String databaseColumn = "hireDate";
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get(databaseColumn),
-                        criteriaBuilder.literal(startDate.getValue())));
+                        criteriaBuilder.literal(hireDate.getValue())));
             }
             if (endDate.getValue() != null) {
-                String databaseColumn = "dateOfBirth";
+                String databaseColumn = "hireDate";
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(criteriaBuilder.literal(endDate.getValue()),
                         root.get(databaseColumn)));
             }
@@ -192,14 +191,6 @@ public class AngajatiView extends Div {
                             .add(criteriaBuilder.equal(criteriaBuilder.literal(occupation), root.get(databaseColumn)));
                 }
                 predicates.add(criteriaBuilder.or(occupationPredicates.toArray(Predicate[]::new)));
-            }
-            if (!roles.isEmpty()) {
-                String databaseColumn = "role";
-                List<Predicate> rolePredicates = new ArrayList<>();
-                for (String role : roles.getValue()) {
-                    rolePredicates.add(criteriaBuilder.equal(criteriaBuilder.literal(role), root.get(databaseColumn)));
-                }
-                predicates.add(criteriaBuilder.or(rolePredicates.toArray(Predicate[]::new)));
             }
             return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
         }
@@ -225,16 +216,16 @@ public class AngajatiView extends Div {
     }
 
     private Component createGrid() {
-        grid = new Grid<>(SamplePerson.class, false);
+        grid = new Grid<>(Employee.class, false);
+        grid.addColumn ("id").setAutoWidth (true);
         grid.addColumn("firstName").setAutoWidth(true);
         grid.addColumn("lastName").setAutoWidth(true);
         grid.addColumn("email").setAutoWidth(true);
         grid.addColumn("phone").setAutoWidth(true);
-        grid.addColumn("dateOfBirth").setAutoWidth(true);
+        grid.addColumn("hireDate").setAutoWidth(true);
         grid.addColumn("occupation").setAutoWidth(true);
-        grid.addColumn("role").setAutoWidth(true);
 
-        grid.setItems(query -> samplePersonService.list(
+        grid.setItems(query -> employeeService.list(
                 PageRequest.of(query.getPage(), query.getPageSize(), VaadinSpringDataHelpers.toSpringDataSort(query)),
                 filters).stream());
         grid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
