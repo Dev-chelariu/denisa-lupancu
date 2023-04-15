@@ -25,11 +25,21 @@ public class EmployeeService implements ICrudService<Employee, Long> {
 
     @Override
     public Page<Employee> list(Pageable pageable) {
-        return repository.findAll(pageable);
+        return repository.findAll (pageable);
     }
 
     @Override
     public Page<Employee> list(Pageable pageable, Specification<Employee> filter) {
-        return repository.findAll(filter, pageable);
+        return repository.findAll (filter, pageable);
+    }
+
+    @Override
+    public Employee save(Employee object) {
+        return null;
+    }
+
+    @Override
+    public void delete(Employee object) {
+
     }
 }
